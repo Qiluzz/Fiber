@@ -1,5 +1,5 @@
 
-import { createTaskQueue, arrified, createStateNode } from '../Misc'
+import { createTaskQueue, arrified, createStateNode, getTag } from '../Misc'
 
 
 
@@ -47,7 +47,7 @@ const reconcileChildren = (fiber, children) =>{
         newFiber = {
             type: element.type, //节点类型(元素, 文本, 组件)(具体的类型)
             props: element.props,// 节点属性
-            tag : 'host_component', //节点标记(对具体类型的分类 hostRoot || hostComponent || classComponent || functionComponent)
+            tag : getTag(element), //节点标记(对具体类型的分类 hostRoot || hostComponent || classComponent || functionComponent)
             effects: [],// 数组, 存储需要更改的 fiber 对象
             effectTag:'placement',// 当前 Fiber 要被执行的操作(新增, 删除, 修改)
             parent: fiber,// 当前 Fiber 的父级 Fiber
