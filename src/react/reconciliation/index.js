@@ -1,5 +1,5 @@
 
-import { createTaskQueue, arrified, createStateNode, getTag } from '../Misc'
+import { createTaskQueue, arrified, createStateNode, getTag, getRoot } from '../Misc'
 import updateNodeElement from '../DOM/updateNodeElement';
 
 const taskQueue = createTaskQueue()
@@ -18,7 +18,12 @@ const commitAllWork = fiber =>{
         /**
          * 向页面中追加节点
          */
-        if(item.effectTag === 'update'){
+        if(item.tag === 'class_component'){
+            item.stateNode.__fiber = item
+        }
+        if (item.effectTag === 'delete'){
+            item.parent.stateNode.removeChild(item.stateNode)
+        }else if(item.effectTag === 'update'){
             /**
              * 更新
              */
@@ -36,8 +41,7 @@ const commitAllWork = fiber =>{
                     item.alternate.stateNode
                 )
             }
-        }
-        if(item.effectTag === 'placement'){
+        }else if(item.effectTag === 'placement'){
             /**
              * 当前追加节点的子节点
              */
@@ -76,6 +80,18 @@ const getFirstTash = () =>{
      */
     const task = taskQueue.pop()
     
+    if(task.from === "class_component"){
+        const root = getRoot(task.instance)
+        task.instance.__fiber.partialState = task.partialState
+        return {
+            props: root.props,
+            stateNode: root.stateNode,
+            tag:'host_root',
+            effects:[],
+            child:null,
+            alternate: root
+        }
+    }
     /**
      * 返回最外层的fiber 对象
      */
@@ -128,7 +144,13 @@ const reconcileChildren = (fiber, children) =>{
         /**
          *  子级 fiber对象
          */
-        if(element && alternate){
+        if(!element  && alternate){
+            /**
+             * 删除
+             */
+            alternate.effectTag = 'delete'
+            fiber.effects.push(alternate)
+        }else if(element && alternate){
             newFiber = {
               type: element.type, //节点类型(元素, 文本, 组件)(具体的类型)
               props: element.props, // 节点属性
@@ -196,6 +218,13 @@ const executeTask = fiber =>{
      */
 
     if (fiber.tag === 'class_component') {
+
+        if(fiber.stateNode.__fiber && fiber.stateNode.__fiber.partialState){
+            fiber.stateNode.state = {
+                ...fiber.stateNode.state,
+                ...fiber.stateNode.__fiber.partialState
+            }
+        }
         reconcileChildren(fiber, fiber.stateNode.render())
     }else if (fiber.tag === 'function_component') {
         reconcileChildren(fiber, fiber.stateNode(fiber.props))
@@ -278,3 +307,13 @@ export const render = (element, dom)=>{
     requestIdleCallback(performTask)
 
 }
+
+export const scheduleUpdate = (instance, partialState) =>{
+    taskQueue.push({
+        from:"class_component",
+        instance,
+        partialState
+    })
+    requestIdleCallback(performTask)
+}
+
