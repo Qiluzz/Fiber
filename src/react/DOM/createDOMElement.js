@@ -11,6 +11,6 @@ export default function createDOMElement(virtualDOM) {
         newElement = document.createElement(virtualDOM.type)
         updateNodeElement(newElement, virtualDOM)
     }
-    
+
     return newElement
 }
